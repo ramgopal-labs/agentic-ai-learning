@@ -1,0 +1,98 @@
+# Full stack: Qdrant + Postgres + API + UI.
+#
+#   cp .env.example .env          # add OPENAI_API_KEY
+#   docker compose up -d --build
+#   docker compose --profile index run --rm indexer   # build the index once
+#
+# UI on http://localhost:8501, API on http://localhost:8000
+
+name: indian-laws-rag
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    restart: unless-stopped
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    ports:
+      - "6333:6333"
+    healthcheck:
+      # The Qdrant image ships no curl, so probe from inside with bash's /dev/tcp.
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-laws}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-laws}
+      POSTGRES_DB: ${POSTGRES_DB:-laws}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-laws} -d ${POSTGRES_DB:-laws}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      DATABASE_URL: postgresql://${POSTGRES_USER:-laws}:${POSTGRES_PASSWORD:-laws}@postgres:5432/${POSTGRES_DB:-laws}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SERPER_API_KEY: ${SERPER_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      API_KEY: ${API_KEY:-}
+      LOG_FORMAT: json
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    ports:
+      - "8000:8000"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:8000
+      API_KEY: ${API_KEY:-}
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+
+  # One-shot index build. Not started by `up`; run it explicitly:
+  #   docker compose --profile index run --rm indexer
+  #   docker compose --profile index run --rm indexer python -m scripts.index_laws --full
+  indexer:
+    profiles: ["index"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LOG_FORMAT: json
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    command: ["python", "-m", "scripts.index_laws"]
+
+volumes:
+  qdrant_storage:
+  postgres_data:

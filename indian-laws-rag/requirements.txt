@@ -1,0 +1,34 @@
+# --- API and UI ---
+fastapi
+uvicorn[standard]
+streamlit
+python-dotenv
+
+# --- Orchestration ---
+langgraph
+langchain-text-splitters
+
+# --- Retrieval ---
+qdrant-client
+sentence-transformers
+fastembed
+datasets
+
+# --- Answer models ---
+openai
+groq
+google-genai
+
+# --- Conversation memory ---
+psycopg[binary]
+psycopg-pool
+
+# --- Utilities ---
+requests
+pandas
+numpy
+
+# --- Evaluation and tests ---
+deepeval
+pytest
+httpx

@@ -1,0 +1,28 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local app data
+*.db
+qdrant_data/
+models/
+
+# PyCharm and Jupyter
+.idea/
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# pytest
+.pytest_cache/
+
+# Lint/format cache
+.ruff_cache/
+
+# DeepEval local cache and telemetry id
+.deepeval/

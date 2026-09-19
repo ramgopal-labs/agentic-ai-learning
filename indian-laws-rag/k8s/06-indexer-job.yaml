@@ -1,0 +1,36 @@
+# One-shot index build. Re-runnable: chunk ids are deterministic, so a second
+# run upserts the same points instead of duplicating them.
+#
+#   kubectl -n indian-laws-rag delete job indexer --ignore-not-found
+#   kubectl -n indian-laws-rag apply -f k8s/06-indexer-job.yaml
+#   kubectl -n indian-laws-rag logs -f job/indexer
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: indexer
+  namespace: indian-laws-rag
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: indexer
+          image: ghcr.io/REPLACE_ME/indian-laws-rag-api:latest
+          command: ["python", "-m", "scripts.index_laws"]
+          # Swap for the full dataset:
+          # command: ["python", "-m", "scripts.index_laws", "--full"]
+          envFrom:
+            - configMapRef:
+                name: rag-config
+            - secretRef:
+                name: rag-secrets
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              memory: "6Gi"

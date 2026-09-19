@@ -1,0 +1,3 @@
+# The UI talks to the API over HTTP only — no models, no vector store, no LLM SDKs.
+streamlit
+requests

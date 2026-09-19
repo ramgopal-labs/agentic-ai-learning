@@ -1,0 +1,8 @@
+{
+  "retrieval": {
+    "recall@6": 1.0,
+    "mrr": 0.96,
+    "misses": 0,
+    "examples": 20
+  }
+}

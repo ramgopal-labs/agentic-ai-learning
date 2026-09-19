@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+  namespace: indian-laws-rag
+spec:
+  selector:
+    app: ui
+  ports:
+    - port: 8501
+      targetPort: 8501
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui
+  namespace: indian-laws-rag
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ui
+  template:
+    metadata:
+      labels:
+        app: ui
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: ui
+          image: ghcr.io/REPLACE_ME/indian-laws-rag-ui:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8501
+          env:
+            - name: API_URL
+              value: http://api:8000
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rag-secrets
+                  key: API_KEY
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              memory: "1Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
